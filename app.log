@@ -1,0 +1,30 @@
+2024-01-02 23:02:14,159 - INFO - Scheduler started
+2024-01-02 23:02:14,160 - INFO - Added job "TextEditorApp.run_task" to job store "default"
+2024-01-02 23:02:15,772 - INFO - Connected (version 2.0, client OpenSSH_8.9p1)
+2024-01-02 23:02:15,802 - INFO - Authentication (publickey) failed.
+2024-01-02 23:02:17,941 - INFO - Authentication (password) failed.
+2024-01-02 23:02:17,941 - ERROR - Error reading remote file: Authentication failed.
+2024-01-02 23:02:17,954 - INFO - Connected (version 2.0, client OpenSSH_8.9p1)
+2024-01-02 23:02:17,973 - INFO - Authentication (publickey) failed.
+2024-01-02 23:02:20,109 - INFO - Authentication (password) failed.
+2024-01-02 23:02:20,109 - ERROR - Error writing to remote files: Authentication failed.
+2024-01-02 23:07:10,894 - INFO - Scheduler started
+2024-01-02 23:07:10,895 - INFO - Added job "TextEditorApp.run_task" to job store "default"
+2024-01-02 23:07:11,852 - INFO - Connected (version 2.0, client OpenSSH_8.9p1)
+2024-01-02 23:07:11,882 - INFO - Authentication (publickey) failed.
+2024-01-02 23:07:14,029 - INFO - Authentication (password) failed.
+2024-01-02 23:07:14,029 - ERROR - Error reading remote file: Authentication failed.
+2024-01-02 23:07:16,029 - INFO - Connected (version 2.0, client OpenSSH_8.9p1)
+2024-01-02 23:07:16,052 - INFO - Authentication (publickey) failed.
+2024-01-02 23:07:18,194 - INFO - Authentication (password) failed.
+2024-01-02 23:07:18,194 - ERROR - Error writing to remote files: Authentication failed.
+2024-01-02 23:40:23,594 - INFO - Scheduler started
+2024-01-02 23:40:23,595 - INFO - Added job "TextEditorApp.run_task" to job store "default"
+2024-01-02 23:44:55,709 - INFO - Scheduler started
+2024-01-02 23:44:55,710 - INFO - Added job "TextEditorApp.run_task" to job store "default"
+2024-01-02 23:56:52,697 - INFO - Scheduler started
+2024-01-02 23:56:52,699 - INFO - Added job "TextEditorApp.run_task" to job store "default"
+2024-01-02 23:58:39,132 - INFO - Scheduler started
+2024-01-02 23:58:39,134 - INFO - Added job "TextEditorApp.run_task" to job store "default"
+2024-01-02 23:58:50,615 - INFO - Scheduler started
+2024-01-02 23:58:50,617 - INFO - Added job "TextEditorApp.run_task" to job store "default"
