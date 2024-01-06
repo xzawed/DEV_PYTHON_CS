@@ -1,12 +1,11 @@
 import sys
 import paramiko
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox
+from PyQt6.QtCore import QTimer
 from PyQt6.uic import loadUiType
 import configparser
-from apscheduler.schedulers.qt import QtScheduler
 import logging
 import ctypes
-import sys
 
 def is_admin():
     try:
@@ -30,6 +29,9 @@ class TextEditorApp(QMainWindow, Ui_MainWindow):
         # 로깅 설정
         logging.basicConfig(filename='app.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.run_task)
+
         # UI 초기화
         self.setupUi(self)
         # 프로그램 시작 시 ini 파일에서 내용을 읽어와 텍스트 에디터에 불러오기
@@ -38,13 +40,28 @@ class TextEditorApp(QMainWindow, Ui_MainWindow):
         self.closeEvent = self.on_closing
         # 버튼 클릭시 실행
         self.initUI()
-        self.on_local()
+        # UI 변경시 실행
+        self.on_change_ui()
+        # 반복실행문 실행
+        self.run_task()
 
     def initUI(self):
         # 버튼 클릭시 이벤트 연결
-        self.BtnAction.clicked.connect(self.run_task)
+        self.BtnAction.clicked.connect(self.modify_remote_files)
         # 로컬영역에서 실행 이벤트 연결
-        self.chkLocal.clicked.connect(self.on_local)
+        self.chkLocal.clicked.connect(self.on_change_ui)
+        # 체크박스 상태에 따라 타이머 동작 설정
+        self.chkRepeat.clicked.connect(self.toggle_timer)
+
+    def toggle_timer(self):
+        if self.chkRepeat.isChecked():
+            # 체크박스가 체크되면 타이머 시작
+            self.timer.start(1 * 60 * 1000)  # 5분(밀리초 단위)
+            self.BtnAction.setEnabled(False)
+        else:
+            # 체크박스가 해제되면 타이머 중지
+            self.timer.stop()
+            self.BtnAction.setEnabled(True)
 
     def on_closing(self, event):
         # 프로그램이 종료될 때 호출되는 함수
@@ -52,7 +69,20 @@ class TextEditorApp(QMainWindow, Ui_MainWindow):
         self.save_to_ini()
         super().closeEvent(event)
 
-    def on_local(self): # 로컬영역 실행
+    def on_remote(self): # 원격영역 실행
+        # SSH 클라이언트 생성
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        # SSH 연결
+        host = self.txtIPADDR.toPlainText()
+        port = 22
+        username = self.txtHOSTID.toPlainText()
+        password = self.lttHOSTPW.text()
+
+        client.connect(host, port, username, password)
+        return client
+
+    def on_change_ui(self): # 로컬영역 실행
         if self.chkLocal.isChecked():
                self.txtIPADDR.setEnabled(False)
                self.txtHOSTID.setEnabled(False)
@@ -61,6 +91,7 @@ class TextEditorApp(QMainWindow, Ui_MainWindow):
                self.txtIPADDR.setEnabled(True)
                self.txtHOSTID.setEnabled(True)
                self.lttHOSTPW.setEnabled(True)
+        self.toggle_timer()
 
     def save_to_ini(self):
         # ini 파일에 내용 저장
@@ -128,32 +159,19 @@ class TextEditorApp(QMainWindow, Ui_MainWindow):
             logging.error(f"Error loading content from INI: {e}")
             self.show_error_message(f"Error loading content from INI:\n{e}")
 
-    def on_save_and_exit(self):
-        # 저장 후 종료 버튼 클릭 시 호출되는 함수
-        self.save_to_ini()
-        self.close()
-
     def read_remote_files(self, remote_file_paths):
         try:
             if not self.chkLocal.isChecked():
-                # SSH 클라이언트 생성
-                client = paramiko.SSHClient()
-                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                # SSH 연결
-                host = self.txtIPADDR.toPlainText()
-                port = 22
-                username = self.txtHOSTID.toPlainText()
-                password = self.lttHOSTPW.text()
-
-                client.connect(host, port, username, password)
-
-                # return content
-                file_contents = {}
-                for remote_file_path in remote_file_paths:
-                    with client.open_sftp().file(remote_file_path, 'r') as remote_file:
-                        content = remote_file.read()
-                        file_contents[remote_file_path] = content
-
+                try:
+                    client = self.on_remote()
+                    # return content
+                    file_contents = {}
+                    for remote_file_path in remote_file_paths:
+                        with client.open_sftp().file(remote_file_path, 'r') as remote_file:
+                            content = remote_file.read()
+                            file_contents[remote_file_path] = content
+                finally:
+                    client.close()
             else:
                 # return content
                 file_contents = {}
@@ -173,16 +191,7 @@ class TextEditorApp(QMainWindow, Ui_MainWindow):
         try:
             if not self.chkLocal.isChecked():
                 try:
-                    # SSH 클라이언트 생성
-                    client = paramiko.SSHClient()
-                    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                    # SSH 연결
-                    host = self.txtIPADDR.toPlainText()
-                    port = 22
-                    username = self.txtHOSTID.toPlainText()
-                    password = self.lttHOSTPW.text()
-
-                    client.connect(host, port, username, password)
+                    client = self.on_remote()
 
                     # 여러 원격 파일 쓰기
                     for remote_file_path, content in file_contents.items():
@@ -197,7 +206,6 @@ class TextEditorApp(QMainWindow, Ui_MainWindow):
                     with open(remote_file_path, 'w') as local_file:
                         local_file.write(content)
                 logging.info(f"Local file {remote_file_path} has been updated.")
-
 
         except Exception as e:
             logging.error(f"Error writing to files: {e}")
@@ -215,12 +223,8 @@ class TextEditorApp(QMainWindow, Ui_MainWindow):
         try:
             contents = self.read_remote_files(remote_file_paths)
             if contents is not None:
-                if not self.chkLocal.isChecked():
-                    for remote_file_path, content in contents.items():
-                        logging.info(f"Remote file content ({remote_file_path}):\n{content}")
-                else:
-                    for remote_file_path, content in contents.items():
-                        logging.info(f"Local file content ({remote_file_path}):\n{content}")
+                for remote_file_path, content in contents.items():
+                    logging.info(f"File content ({remote_file_path}):\n{content}")
 
             # 원격 파일 쓰기
             new_contents = {
@@ -235,12 +239,11 @@ class TextEditorApp(QMainWindow, Ui_MainWindow):
             self.show_error_message(f"Error modifying files:\n{e}")
 
     def run_task(self):
-        if self.chkRepeat.isChecked():
-            # 여기에 5분마다 실행되어야 할 작업을 추가하세요.
+        try:
             self.modify_remote_files()
-        else:
-            # 여기에 1번 실행되어야 할 작업을 추가하세요.
-            self.modify_remote_files()
+        except Exception as e:
+            logging.error(f"Error running task: {e}")
+            self.show_error_message(f"Error running task:\n{e}")
 
     # 새로운 메서드 추가: 에러 메시지 팝업 표시
     def show_error_message(self, message):
@@ -255,8 +258,4 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = TextEditorApp()
     window.show()
-    scheduler = QtScheduler()
-    scheduler.start()
-    # 5분 간격으로 run_task 함수 실행
-    scheduler.add_job(window.run_task, 'interval', minutes=5)
     app.exec()
