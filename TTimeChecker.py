@@ -6,6 +6,7 @@ from PyQt6.uic import loadUiType
 import configparser
 import logging
 import ctypes
+import chardet
 
 def is_admin():
     try:
@@ -56,7 +57,7 @@ class TextEditorApp(QMainWindow, Ui_MainWindow):
     def toggle_timer(self):
         if self.chkRepeat.isChecked():
             # 체크박스가 체크되면 타이머 시작
-            self.timer.start(1 * 60 * 1000)  # 5분(밀리초 단위)
+            self.timer.start(5 * 60 * 1000)  # 5분(밀리초 단위)
             self.BtnAction.setEnabled(False)
         else:
             # 체크박스가 해제되면 타이머 중지
@@ -92,6 +93,11 @@ class TextEditorApp(QMainWindow, Ui_MainWindow):
                self.txtHOSTID.setEnabled(True)
                self.lttHOSTPW.setEnabled(True)
         self.toggle_timer()
+
+    def detect_encoding(file_path):
+        with open(file_path, 'rb') as file:
+            result = chardet.detect(file.read())
+            return result['encoding']
 
     def save_to_ini(self):
         # ini 파일에 내용 저장
@@ -167,7 +173,8 @@ class TextEditorApp(QMainWindow, Ui_MainWindow):
                     # return content
                     file_contents = {}
                     for remote_file_path in remote_file_paths:
-                        with client.open_sftp().file(remote_file_path, 'r') as remote_file:
+                        encoding = self.detect_encoding(remote_file_path)
+                        with client.open_sftp().file(remote_file_path, 'r', encoding=encoding) as remote_file:
                             content = remote_file.read()
                             file_contents[remote_file_path] = content
                 finally:
@@ -195,7 +202,8 @@ class TextEditorApp(QMainWindow, Ui_MainWindow):
 
                     # 여러 원격 파일 쓰기
                     for remote_file_path, content in file_contents.items():
-                        with client.open_sftp().file(remote_file_path, 'w') as remote_file:
+                        encoding = self.detect_encoding(remote_file_path)
+                        with client.open_sftp().file(remote_file_path, 'w', encoding=encoding) as remote_file:
                             remote_file.write(content)
                     logging.info(f"Remote file {remote_file_path} has been updated.")
                 finally:
